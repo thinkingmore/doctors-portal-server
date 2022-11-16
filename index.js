@@ -24,19 +24,26 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 const run = async() => {
     try{
         const appointmentOptionCollection = client.db("doctorsPortal").collection("AppointmentOptions")
-        const bookingCollection = client.db("doctorsPortal").collection("bookings")
+        const bookingsCollection = client.db("doctorsPortal").collection("bookings")
         
+        // collecting multiple data by aggregating query
         app.get("/appointmentOptions", async(req, res)=>{
             const date = req.query.date;
             console.log(date);
             const query = {};
             const options = await appointmentOptionCollection.find(query).toArray();
+
+            // getting booking information by date
             const bookingQuery = {appointmentDate: date};
-            const alreadyBooked = await bookingCollection.find(bookingQuery).toArray();
+            const alreadyBooked = await bookingsCollection.find(bookingQuery).toArray();
+
+            //finding booked slots
             options.forEach(option=>{
                 const optionBooked = alreadyBooked.filter(book => book.treatment === option.name)
                 const bookedSlot = optionBooked.map(book => book.slot )
-                console.log(date,option.name,bookedSlot);
+                const remainingSlots = option.slots.filter(slot=> !bookedSlot.includes(slot))
+                option.slots = remainingSlots;
+                console.log(date, option.name, remainingSlots.length);
             })
             res.send(options);
         })
@@ -44,13 +51,26 @@ const run = async() => {
         app.post("/bookings", async(req, res)=>{
             const booking = req.body;
             console.log(booking);
-            const result = await bookingCollection.insertOne(booking);
+            const query = {
+                appointmentDate: booking.appointmentDate,
+                email: booking.email,
+                treatment: booking.treatment
+
+            }
+
+            const alreadyBooked = await bookingsCollection.find(query).toArray();
+            if(alreadyBooked.length){
+                const message = `You already have a booking on ${booking.appointmentDate}`;
+                return(res.send({acknowledged: false,message}))
+            }
+           
+            const result = await bookingsCollection.insertOne(booking);
             res.send(result);
         })
 
         app.get("/bookings", async(req, res)=>{
             const query = {};
-            const result = await bookingCollection.find(query).toArray();
+            const result = await bookingsCollection.find(query).toArray();
             res.send(result);
         })
 
