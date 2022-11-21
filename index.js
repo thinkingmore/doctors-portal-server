@@ -91,6 +91,13 @@ const run = async() => {
             res.send(result);
         })
 
+        app.delete("/doctors/:id",async(req,res)=>{
+            const id = req.params.id;
+            const doctor = { _id: ObjectId(id)};
+            const result = await doctorsCollection.deleteOne(doctor);
+            res.send(result);
+        })
+
         //api for getting and posting booking data
 
         app.post("/bookings",async(req, res)=>{
