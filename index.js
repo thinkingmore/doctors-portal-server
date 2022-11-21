@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const { response } = require('express');
 require('dotenv').config();
 
 const port = process.env.PORT || 5000;
@@ -46,6 +47,7 @@ const run = async() => {
         const appointmentOptionCollection = client.db("doctorsPortal").collection("AppointmentOptions")
         const bookingsCollection = client.db("doctorsPortal").collection("bookings")
         const usersCollection = client.db("doctorsPortal").collection("users")
+        const doctorsCollection = client.db("doctorsPortal").collection("doctors")
         
         // collecting multiple data by aggregating query
         app.get("/appointmentOptions", async(req, res)=>{
@@ -68,6 +70,28 @@ const run = async() => {
             })
             res.send(options);
         })
+
+        app.get("/appointmentSpeciality", async(req, res)=>{
+            const query = {}
+            const result = await appointmentOptionCollection.find(query).project({name: 1}).toArray();
+            res.send(result);
+
+        })
+
+        // api for posting doctors data
+        app.post("/doctors", async(req,res)=>{
+            const doctor = req.body;
+            const result = await doctorsCollection.insertOne(doctor);
+            res.send(result);
+        })
+
+        app.get("/doctors", async(req, res)=>{
+            const query = {};
+            const result = await doctorsCollection.find(query).toArray();
+            res.send(result);
+        })
+
+        //api for getting and posting booking data
 
         app.post("/bookings",async(req, res)=>{
             const booking = req.body;
