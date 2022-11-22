@@ -49,6 +49,20 @@ const run = async() => {
         const usersCollection = client.db("doctorsPortal").collection("users")
         const doctorsCollection = client.db("doctorsPortal").collection("doctors")
         
+        //Note: make sure you run verifyAdmin after verifyJWT
+        const verifyAdmin = async(req,res,next) =>{
+            const decodedEmail= req.decoded.email;
+            const query = {email: decodedEmail};
+            const user = await usersCollection.findOne(query);
+
+            if(user?.role !== 'admin'){
+                return res.status(403).send({message: "Forbidden Access"});
+            }
+            next();
+        }
+        
+        
+        
         // collecting multiple data by aggregating query
         app.get("/appointmentOptions", async(req, res)=>{
             const date = req.query.date;
@@ -79,19 +93,19 @@ const run = async() => {
         })
 
         // api for posting doctors data
-        app.post("/doctors", async(req,res)=>{
+        app.post("/doctors", verifyJWT,verifyAdmin, async(req,res)=>{
             const doctor = req.body;
             const result = await doctorsCollection.insertOne(doctor);
             res.send(result);
         })
 
-        app.get("/doctors", async(req, res)=>{
+        app.get("/doctors", verifyJWT,verifyAdmin, async(req, res)=>{
             const query = {};
             const result = await doctorsCollection.find(query).toArray();
             res.send(result);
         })
 
-        app.delete("/doctors/:id",async(req,res)=>{
+        app.delete("/doctors/:id", verifyJWT,verifyAdmin,async(req,res)=>{
             const id = req.params.id;
             const doctor = { _id: ObjectId(id)};
             const result = await doctorsCollection.deleteOne(doctor);
